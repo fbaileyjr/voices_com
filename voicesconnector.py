@@ -1,8 +1,7 @@
 import requests
+import bs4 as BeautifulSoup
+import re
 import json
-import math
-
-
 class VoicesConnector:
     def __init__(self, headers, payload):
         self.headers = headers
@@ -25,65 +24,41 @@ class VoicesConnector:
             raise Exception
             return False
 
-    def get_all_organizations(self):
-        # perform calculations
-        pagevalue = self.page_number_calc(self.get_count_of_all_organizations())
-
-        print("pagevalue is {pagevalue}".format(pagevalue=pagevalue))
-
-        list_of_all_orgs = []
-
-        organization_gen = self.get_organization_next_page(pagevalue)
-
-        all_org_gen = self.yield_from_all_organization_pages(organization_gen)
-
-        for x in all_org_gen:
-            list_of_all_orgs.append(x)
-
-        return list_of_all_orgs
-
-    def get_count_of_all_organizations(self):
-        counturl = "https://axonius.zendesk.com/api/v2/organizations/count"
-
-        # get the count first
-        try:
-            self.countresponse = self.call_and_unpack_responses(counturl)
-        except Exception:
-            print("Failed to get a response for organization count...")
-
-        if self.check_dict(self.countresponse):
-            return self.countresponse["count"]["value"]
-        else:
-            print("Returned value for count is not a dictionary. ")
-            raise Exception
-
-    def get_organization_next_page(self, number_of_pages):
-        organization_url = "https://axonius.zendesk.com/api/v2/organizations?page[size]=100&page="
-        for number in range(1, (number_of_pages + 1)):
-            yield self.call_and_unpack_responses(
-                "{organization_url}{number}".format(
-                    organization_url=organization_url, number=number
-                )
-            )
-
-    def get_se_and_tam(sfid):
-        pass
-
-    def get_users_by_organization(self, organization_id):
-        api_url = f"https://axonius.zendesk.com/api/v2/organizations/{organization_id}/users"
-        try:
-            self.user_list_response = self.call_and_unpack_responses(api_url)
-        except Exception:
-            print("Failed to get a response for organization count...")
-
-        if self.check_dict(self.countresponse):
-            return self.user_list_response
-        else:
-            print("Returned value for count is not a dictionary. ")
-            raise Exception
-
     def jdump(obj):
         print(json.dumps(obj, indent=2))
+
+    def match_security_cookie(self, response_string):
+        # regex pattern for customer groups
+        self.matched_string = re.search(r"(security_cookie=\w+);", response_string, re.I)
+        if self.matched_string.group(1):
+            return self.matched_string.group(1)
+        else:
+            print("No match")
+
+    def match_metrics(self, response_string):
+        # regex pattern for customer groups
+        self.matched_string = re.search(r"(metrics=\w+);", response_string, re.I)
+        if self.matched_string.group(1):
+            return self.matched_string.group(1)
+        else:
+            print("No match")
+
+    def match_security_cookie(self, response_string):
+        # regex pattern for security cookie
+        self.matched_string = re.search(r"(security_cookie=\w+);", response_string, re.I)
+        if self.matched_string.group(1):
+            return self.matched_string.group(1)
+        else:
+            print("No match")
+
+    def match_vdc_session(self, response_string):
+        # regex pattern for customer groups
+        self.matched_string = re.search(r"(vdc_sess=\w+);", response_string, re.I)
+        if self.matched_string.group(1):
+            return self.matched_string.group(1)
+        else:
+            print("No match")
+
 
     def page_number_calc(self, count):
         # rounds down to the nearest integer
@@ -107,6 +82,49 @@ class VoicesConnector:
             if page.get("organizations"):
                 yield from page["organizations"]
 
+
+def connect_and_get_response(url):
+    response = response = requests.request("GET", url)
+    response_string = response.headers['Set-Cookie']
+    return response_string
+
+def match_metrics(response_string):
+    # regex pattern for customer groups
+    matched_string = re.search(r"(metrics=\w+);", response_string, re.I)
+    if matched_string.group(1):
+        return matched_string.group(1)
+    else:
+        print("No match")
+
+
+def match_security_cookie(response_string):
+    # regex pattern for customer groups
+    matched_string = re.search(r"security_cookie=(\w+)", response_string, re.I)
+    if matched_string.group(1):
+        return matched_string.group(1)
+    else:
+        print("No match")
+
+def match_vdc_session(response_string):
+    # regex pattern for customer groups
+    matched_string = re.search(r"(vdc_sess=\w+);", response_string, re.I)
+    if matched_string.group(1):
+        return matched_string.group(1)
+    else:
+        print("No match")
+
+# return headers
+def return_headers(security_cookie, vdc_sess, metrics):
+    headers = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Cookie': f'security_cookie={security_cookie}; {vdc_sess}; {metrics}; vo_shortlist_count_24hours213111=0; vo_shortlist_count_all_time213111=88; vo_shortlist_last_updated213111=2%20weeks'
+    }
+    return headers
+
+# need to update to pass and encode the url string
+def return_payload(security_cookie):
+    payload=f'security_token={security_cookie}&login=frankbaileyjr%40gmail.com&password=Kaley2Moira'
+    return payload
 
 """
 response.headers['Set-Cookie']
@@ -133,7 +151,158 @@ headers = {
 }
 
 response = requests.request("GET", url, headers=headers, data=payload)
+response = requests.request("POST", url, headers=headers, data=payload)
+
+
+---
+match sequence
+
+payload={}
+headers={}
+
+response = requests.request("GET", url, headers=headers, data=payload)
+
+security_cookie=match_security_cookie(response.headers['Set-Cookie'])
+vdc_sess=match_vdc_session(response.headers['Set-Cookie'])
+metrics=match_metrics(response.headers['Set-Cookie'])
+payload=return_payload(security_cookie)
+
+post_response = requests.request("POST", url, headers=headers, data=payload)
+
+
+
+
+res = requests.post('https://api.github.com/user', verify=False, auth=HTTPBasicAuth('user', 'password'))
+-----
+
+with requests.Session() as s:
+    first_response = s.get(url + '/login')
+    matched_string = re.search(r"security_cookie=(\w+)", test_string, re.I)
+    security_cookie = matched_string.group(1)
+    s.headers.update({'content-type':'application/x-www-form-urlencoded'})
+    data = {
+       'security_token' : security_cookie,
+       'login' : 'frankbaileyjr@gmail.com',
+       'password' : 'Kaley2Moira',
+       'sign_in' : 'Log In',
+    }
+    response = requests.post(url + '/login', data=data)
+    pprint(response.text)
+
+
+s = requests.Session()
+first_response = s.get(url + '/login')
+matched_string = re.search(r"security_cookie=(\w+)", test_string, re.I)
+security_cookie = irst_response.cookies['security_cookie']
+s.headers.update({'content-type':'application/x-www-form-urlencoded'})
+
+data = {
+   'security_token' : security_cookie,
+   'login' : 'frankbaileyjr@gmail.com',
+   'password' : 'Kaley2Moira',
+   'sign_in' : 'Log In',
+}
+response = requests.post(url + '/login', data=data)
+pprint(response.text)
+    
+data = 
+
+
+
+
+
+
+
 
 print(response.text)
 
-"""
+test_string = response.headers['Set-Cookie']
+
+split_stringe = test_string.split("; ")
+
+>>> for x in first_split:
+...     test_list.append(x.split(","))
+
+for pair in split_string:
+    try:
+        temp_dict = dict(s.split('=', 1) for s in pair.split())
+    except Exception:
+        pass
+    test_dict.update(temp_dict)
+
+security_token: 1c232cca39f843184787029836aba899
+timezone_id: 8
+vanilla_forums_jwt: 
+login: frankbaileyjr@gmail.com
+password: Kaley2Moira
+sign_in: Log In
+
+
+url = "https://www.voices.com/login"
+
+I can automate the whole entire process, I'll do that tomorrow
+
+
+import requests
+
+import requests
+
+url = "https://www.voices.com/login"
+
+payload='security_token=e4ad561c21289139729098ae7f29d007&login=frankbaileyjr%40gmail.com&password=Kaley2Moira'
+headers = {
+  'Content-Type': 'application/x-www-form-urlencoded',
+  'Cookie': 'security_cookie=dd1c92411dcdacf11dfad966e2ed1471; vdc_sess=l196kipmta8ph52igjtbc9033q8gllpj; metrics=5ab4dee0027f8959471c5dec88b828436d7cd926; vo_shortlist_count_24hours213111=0; vo_shortlist_count_all_time213111=88; vo_shortlist_last_updated213111=2%20weeks'
+}
+
+ s.headers.update({'Cookie' : f'security_cookie={security_cookie}; vdc_sess={s.cookies['vdc_sess']}; metrics={s.cookies['metrics']}; vo_shortlist_count_24hours213111=0; vo_shortlist_count_all_time213111=88; vo_shortlist_last_updated213111=2%20weeks'})
+
+response = requests.request("POST", url, headers=headers, data=payload)
+
+print(response.text)
+
+
+dammit
+
+you have to update s.headers
+headers = {
+  'Content-Type': 'application/x-www-form-urlencoded',
+  'Cookie': 'security_cookie=dd1c92411dcdacf11dfad966e2ed1471; vdc_sess=l196kipmta8ph52igjtbc9033q8gllpj; metrics=5ab4dee0027f8959471c5dec88b828436d7cd926; vo_shortlist_count_24hours213111=0; vo_shortlist_count_all_time213111=88; vo_shortlist_last_updated213111=2%20weeks'
+}
+
+
+
+data = {
+   'security_token' : security_cookie,
+   'login' : 'frankbaileyjr@gmail.com',
+   'password' : 'Kaley2Moira',
+   'sign_in' : 'Log In',
+}
+
+# for current
+url for current = https://www.voices.com/talent/jobs_pagination?offset=0&limit=100
+
+request payload is the query to specify answered, archived, etc
+
+# for answered
+answered_payload = {"sort":{"order":"desc","by":"posted_date"},"search":{"query":null},"filter":{"by":["status:answered","show:all"]},"custom":{}}
+
+
+
+# for archived?
+archived_payload = {"sort":{"order":"desc","by":"posted_date"},"search":{"query":null},"filter":{"by":["status:deleted","show:all"]},"custom":{}}
+
+url for archived = https://www.voices.com/talent/jobs_pagination/?offset=0&limit=100
+url for secon page = https://www.voices.com/talent/jobs_pagination?offset=200&limit=100
+retunrs a json object
+
+# make a dict from returned json response
+# dict keys are status, data
+json_result = jobs.json()
+totals = json_result['data']['total']
+
+# dict keys for json_results['data'] are ['total', 'entities', 'member']
+# json_results['data']['entities'] is a list, this is what we will need to iterate through in the end to convert into a csv. Probably csv export using dict keys
+
+
+# update existing results dict
