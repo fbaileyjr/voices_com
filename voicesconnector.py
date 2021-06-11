@@ -6,55 +6,12 @@ import sys
 from bs4 import BeautifulSoup
 from config import username, password
 
+""" Voices.com Job Exporter.
 
-def connect_and_get_response(url):
-    response = response = requests.request("GET", url)
-    response_string = response.headers["Set-Cookie"]
-    return response_string
-
-
-def match_metrics(response_string):
-    # regex pattern for customer groups
-    matched_string = re.search(r"(metrics=\w+);", response_string, re.I)
-    if matched_string.group(1):
-        return matched_string.group(1)
-    else:
-        print("No match")
-
-
-def match_security_cookie(response_string):
-    # regex pattern for customer groups
-    matched_string = re.search(r"security_cookie=(\w+)", response_string, re.I)
-    if matched_string.group(1):
-        return matched_string.group(1)
-    else:
-        print("No match")
-
-
-def match_vdc_session(response_string):
-    # regex pattern for customer groups
-    matched_string = re.search(r"(vdc_sess=\w+);", response_string, re.I)
-    if matched_string.group(1):
-        return matched_string.group(1)
-    else:
-        print("No match")
-
-
-# return headers
-def return_headers(security_cookie, vdc_sess, metrics):
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Cookie": f"security_cookie={security_cookie}; {vdc_sess}; {metrics}; vo_shortlist_count_24hours213111=0; vo_shortlist_count_all_time213111=88; vo_shortlist_last_updated213111=2%20weeks",
-    }
-    return headers
-
-
-# need to update to pass and encode the url string
-def return_payload(security_cookie):
-    payload = (
-        f"security_token={security_cookie}&login=frankbaileyjr%40gmail.com&password=Kaley2Moira"
-    )
-    return payload
+Args:
+    None: If no parameter is provided, all records will be exported
+    shortlist: If provided, only records that have been shortlisted will be returned
+"""
 
 
 def return_shortlist(entity_list):
@@ -238,6 +195,9 @@ if __name__ == "__main__":
             write_entities_to_csv(entity_list)
             print("Done")
 """
+
+format:
+
   {
     "id": 470800,
     "member_id": 213111,
@@ -276,5 +236,16 @@ if __name__ == "__main__":
     "is_denied": false,
     "is_closed": false,
     "is_saved": 0
-  },
+  }
+
+  payload to archive jobs:
+  {
+      "sort":{"order":"desc","by":"posted_date"},
+      "search":{"query":null},"
+      "filter":{"by":["status:answered","show:all"]},
+      "custom":{"archive_ids":["470443","469793"]}
+}
+
+payload for answered jobs:
+{"sort":{"order":"desc","by":"posted_date"},"search":{"query":null},"filter":{"by":["status:answered","show:all"]},"custom":{}}
   """
